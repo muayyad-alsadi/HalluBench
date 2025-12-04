@@ -1,0 +1,5 @@
+python-dotenv
+any-llm-sdk[all]
+numpy
+pandas
+matplotlib
