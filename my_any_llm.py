@@ -24,7 +24,7 @@ def completion_openai(api_key, model, messages, max_completion_tokens=None):
             "type": "text"
         }
     )
-    if model.endswith('-5') or "-5-" in model: kwargs['reasoning_effort']="minimal"
+    #if model.endswith('-5') or "-5-" in model: kwargs['reasoning_effort']="minimal"
     response = client.chat.completions.create(
         model=model,
         messages=messages,
@@ -71,6 +71,6 @@ def completion(api_key, provider, model, messages):
         return completion_openai(api_key, model, messages)
     if provider=='ollama':
         return completion_ollama(api_key, model, messages)
-    if provider=='google':
+    if provider=='google' or provider=='gemini':
         return completion_google(api_key, model, messages)
     raise NotImplementedError(f"provider not implemented: {provider}")

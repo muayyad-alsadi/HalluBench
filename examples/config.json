@@ -1,7 +1,7 @@
 {
     "enabled_models": {
-        "gooogle": ["gimini-2.5-flash"],
-        "ollama": ["kimi-k2:1t-cloud"],
+        "gemini": ["gemini-2.5-flash"],
+        "ollama": ["qwen3-vl:235b-instruct-cloud", "kimi-k2-thinking:cloud", "kimi-k2:1t-cloud", "gpt-oss:120b-cloud", "gpt-oss:20b-cloud","ministral-3:14b-cloud", "mistral-large-3:675b-cloud", "deepseek-v3.1:671b-cloud","minimax-m2:cloud"],
         "openai": ["gpt-4o-mini", "gpt-4o", "gpt-4.1-nano", "gpt-4.1-mini", "gpt-4.1", "gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-5.1"]
     }
 }

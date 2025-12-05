@@ -78,29 +78,30 @@ def get_df3(n=50, skip_n=3, per_group=5, uuid_count=None, md5_count=None):
     data = [gen_item(i, signal_n, divisor, uuid_pool, md5_pool) for i in range(1,n+1) if i not in skip]
     return pd.DataFrame(data, columns=data[0].keys())
 
-def eval_hallucination_rate(df, df_out):
+def eval_hallucination_rate(df_true, df_out):
+    cols = set(df_true.columns) - {'signal'}
     u=set()
     i=set()
-    for key in ['id', 'uuid', 'md5', 'date', 'update_timestamp']:
-        u |= set(df[key])
+    for key in cols:
+        u |= set(df_true[key])
         u |= set(df_out[key])
-        i |= set(df[key]) & set(df_out[key])
+        i |= set(df_true[key]) & set(df_out[key])
     print(u-i)
     d=len(u)
     e=len(u-i)
     key = 'signal'
-    u = set(df[key]) | set(df_out[key])
-    i = set(df[key]) & set(df_out[key])
+    u = set(df_true[key]) | set(df_out[key])
+    i = set(df_true[key]) & set(df_out[key])
     print(u-i)
     d += len(u)
     e += len(u-i)
     print(e, d, e/d)
     return e/d, d
 
-def eval_correspondence(df, df_out):
-    df1 = df.set_index(['id'])
+def eval_correspondence(df_true, df_out):
+    df1 = df_true.set_index(['id'])
     df2 = df_out.set_index(['id'])
-    ids = set(df["id"]) | set(df_out["id"])
+    ids = set(df_true["id"]) | set(df_out["id"])
     ls = []
     e = 0
     for i in ids:
@@ -127,12 +128,35 @@ def eval_correspondence_alt(df, df_out):
     d=len(ids)
     return e/d, d
 
-def eval_sort_task(df_out, sort_by='signal'):
-    d = len(df_out[sort_by])
-    e_task = sum(np.argsort(list(df_out[sort_by]))!=np.array(range(len(df_out[sort_by])))) / d
+def eval_sort_task(df_out, sort_by='signal', reverse=False):
+    d = len(df_out)
+    a = np.array(df_out[sort_by])
+    if reverse:
+        a = -a
+    e_task = sum(np.argsort(a)!=np.arange(d)) / d
     return e_task, d
 
 task1_prompt = "You will be given CSV with header, return the file ordered by value of `signal` column ascending. Give full and direct answer."
+
+task1_2_prompt = """
+You will be given CSV with header.
+Your task is to construct a CSV such that:
+* Rename `update_timestamp` into `update_date` and remove time part of it, keeping date part only. Move this column to be just after `id` (deleting original `update_timestamp`).
+* Add a column named `hex4_id` just after newly add `update_date` having 4 hexadecimal digits formed by using the rightmost 2 digits from `md5` followed by the rightmost 2 digits from `uuid`.
+* Drop `date` and `uuid` columns
+* make `md5` uppercase while keeping `hex4_id` lowercase.
+* Keep other columns as-is and in same order.
+* rows should be returned in reverse order.
+* Give full CSV output, and direct answer only no explanation.
+""".strip()
+
+def get_task_1_2_true(df_in):
+    df_true = pd.DataFrame(df_in)
+    df_true['update_date'] = [i[:10] for i in df_true['update_timestamp']]
+    df_true['hex4_id'] = [i[-2:]+j[-2:] for i,j in zip(df_true['md5'], df_true['uuid'])]
+    df_true['md5'] = [i.upper() for i in df_true['md5']]
+    df_true = pd.DataFrame(df_true, columns=('id', 'update_date', 'hex4_id', 'md5', 'signal'))
+    return df_true
 
 def get_task2_prompt(grouping_key, grouping_val, example_1="1970-12-30", example_2="1970-12-31"):
     return f"""

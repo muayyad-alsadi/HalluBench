@@ -7,10 +7,9 @@ import statistics
 import HalluBench
 
 from dotenv import load_dotenv
-try:
-    from any_llm import completion
-except ImportError:
-    from my_any_llm import completion
+
+# from any_llm import completion
+from my_any_llm import completion
 
 def llm_response(provider: str, model_name: str, sys_prompt: str, text: str):
     key_env = provider.upper()+'_API_KEY'
@@ -28,17 +27,22 @@ def llm_response(provider: str, model_name: str, sys_prompt: str, text: str):
     return response.choices[0].message.content
 
 load_dotenv()
+if 'GOOGLE_API_KEY' not in os.environ and 'GEMINI_API_KEY' in os.environ:
+    os.environ['GOOGLE_API_KEY'] = os.environ['GEMINI_API_KEY']
+if 'GEMINI_API_KEY' not in os.environ and 'GOOGLE_API_KEY' in os.environ:
+    os.environ['GEMINI_API_KEY'] = os.environ['GOOGLE_API_KEY']
 
-def eval_one(provider, model_name, df_in):
-    sys_prompt = HalluBench.task1_prompt
+def eval_task_1_2(provider, model_name, df_in, df_true):
+    sys_prompt = HalluBench.task1_2_prompt
     csv_str = HalluBench.df_to_csv_str(df_in)
     text = f"```csv\n{csv_str}\n```"
     res = llm_response(provider, model_name, sys_prompt, text)
     df_out = HalluBench.csv_str_to_df(res)
+    #print(df_out)
     print("output size:", len(df_out))
-    e1_rate, d1 = HalluBench.eval_hallucination_rate(df_in, df_out)
-    e2_rate, d2 = HalluBench.eval_correspondence(df_in, df_out)
-    e_task, d3 = HalluBench.eval_sort_task(df_out)
+    e1_rate, d1 = HalluBench.eval_hallucination_rate(df_true, df_out)
+    e2_rate, d2 = HalluBench.eval_correspondence(df_true, df_out)
+    e_task, d3 = HalluBench.eval_sort_task(df_out, 'id', True)
     print("hallucination rate: ", e1_rate)
     print("corr mismatch rate: ", e2_rate)
     print("task errors", e_task)
@@ -57,11 +61,13 @@ def main():
         conf = json.load(f)
     df_in = HalluBench.get_df1(n=n)
     print("input CSV:\n", df_in)
-    print("size of input CSV:\n", len(df_in))
+    df_true = HalluBench.get_task_1_2_true(df_in)
+    print("expected true CSV:\n", df_true)
+    print("size of CSV:\n", len(df_true))
     for provider, models in conf["enabled_models"].items():
         for model_name in models:
             print(f"** II ** evaluating {provider} {model_name}:... (error rates: lower is better)")
-            try: eval_one(provider, model_name, df_in)
+            try: eval_task_1_2(provider, model_name, df_in, df_true)
             except Exception as e:
                 print(f"** II ** evaluating {provider} {model_name}: FAILED")
                 print(e)
